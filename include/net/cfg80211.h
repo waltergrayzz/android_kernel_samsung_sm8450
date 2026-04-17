@@ -5012,6 +5012,8 @@ struct wiphy {
 
 	u8 max_num_pmkids;
 
+	u16 max_num_akm_suites;
+
 	u32 available_antennas_tx;
 	u32 available_antennas_rx;
 
@@ -5082,7 +5084,6 @@ struct wiphy {
 	} tid_config_support;
 
 	u8 max_data_retry_count;
-	u16 max_num_akm_suites;
 
 	ANDROID_KABI_RESERVE(1);
 

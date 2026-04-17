@@ -706,6 +706,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_HE_OBSS_PD] = NLA_POLICY_NESTED(he_obss_pd_policy),
 	[NL80211_ATTR_VLAN_ID] = NLA_POLICY_RANGE(NLA_U16, 1, VLAN_N_VID - 2),
 	[NL80211_ATTR_HE_BSS_COLOR] = NLA_POLICY_NESTED(he_bss_color_policy),
+	[NL80211_ATTR_MAX_NUM_AKM_SUITES] = { .type = NLA_REJECT },
 	[NL80211_ATTR_TID_CONFIG] =
 		NLA_POLICY_NESTED_ARRAY(nl80211_tid_config_attr_policy),
 	[NL80211_ATTR_CONTROL_PORT_NO_PREAUTH] = { .type = NLA_FLAG },
@@ -727,7 +728,6 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_SAE_PWE] =
 		NLA_POLICY_RANGE(NLA_U8, NL80211_SAE_PWE_HUNT_AND_PECK,
 				 NL80211_SAE_PWE_BOTH),
-	[NL80211_ATTR_MAX_NUM_AKM_SUITES] = { .type = NLA_REJECT },
 };
 
 /* policy for the key attributes */
@@ -2201,6 +2201,18 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 			       rdev->wiphy.max_num_pmkids))
 			goto nla_put_failure;
 
+		/* Backport: advertise max AKM suites so wificond doesn't fail.
+		 * Use driver's value if set, otherwise fall back to the
+		 * NL80211_MAX_NR_AKM_SUITES constant. */
+		{
+			u16 akm_suites = dev->wiphy.max_num_akm_suites ?
+			dev->wiphy.max_num_akm_suites :
+			NL80211_MAX_NR_AKM_SUITES;
+			if (nla_put_u16(msg, NL80211_ATTR_MAX_NUM_AKM_SUITES,
+				akm_suites))
+				goto nla_put_failure;
+		}
+
 		if ((rdev->wiphy.flags & WIPHY_FLAG_CONTROL_PORT_PROTOCOL) &&
 		    nla_put_flag(msg, NL80211_ATTR_CONTROL_PORT_ETHERTYPE))
 			goto nla_put_failure;
@@ -2680,9 +2692,6 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 		if (nl80211_put_tid_config_support(rdev, msg))
 			goto nla_put_failure;
 
-		if (nla_put_u16(msg, NL80211_ATTR_MAX_NUM_AKM_SUITES,
-				rdev->wiphy.max_num_akm_suites))
-			goto nla_put_failure;
 
 		/* done */
 		state->split_start = 0;
